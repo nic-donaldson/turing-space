@@ -35,15 +35,28 @@
            :current 0
            :right   []}})
 
+(def no-transition-machine
+  {:Q #{0 1}
+   :G #{0 1}
+   :b 0
+   :S #{1}
+   :state 0
+   :F #{1}
+   :d {}
+   :tape {:left []
+          :current 0
+          :right []}})
+
 (defn generate-delta []
-  (let [:Q #{1 2}
-        :F #{2}
-        :G #{0 1}]
+  (let [Q #{1 2}
+        F #{2}
+        G #{0 1}]
     (println "zzz")))
 
 (defn lookup-action
-  [{delta :d state :state :as machine} sym]
+  [delta sym state]
   (get-in delta [sym state]))
+
 
 (defn apply-action-to-tape
   [sym move {:keys [left current right] :as tape} blank]
@@ -62,28 +75,27 @@
 ;;; Transition function
 (defn transition
   "Performs turing machine transition on provided machine with
-  tape, returning new machine."
+  tape, returning new machine. Returns nil if the machine has
+  halted."
   [{:keys [Q G b S state F d tape] :as machine}]
-  (if (state F)
-    ;; if we're in a final state, nothing happens
-    machine
-    ;; let's get the action, compute the new tape,
-    ;; set the new state,
-    ;; and return the new machine.
-    (let [sym                      (:current tape)
-          [new-sym move new-state] (lookup-action machine sym)
-          new-tape                (apply-action-to-tape new-sym move tape b)]
-      (-> machine
-          (assoc-in [:tape] new-tape)
-          (assoc-in [:state] new-state)))))
+  (let [sym                                 (:current tape)
+        [new-sym move new-state :as action] (lookup-action d sym state)]
+    (if (or (= nil action) (state F))
+      ;; if we're in a final state or there is no transition, nothing happens
+      nil
+      (let [new-tape (apply-action-to-tape new-sym move tape b)]
+        (-> machine
+            (assoc-in [:tape] new-tape)
+            (assoc-in [:state] new-state))))))
 
 (defn xtransition
   "Extended transition function. Runs machine until it halts
   or n-steps are performed. Returns resulting machine."
   [machine n-steps]
-  (loop [{:keys [state F] :as machine} machine
-         rem-steps                     n-steps]
-    (if (or (= 0 rem-steps) (state F))
+  (loop [machine   machine
+         rem-steps n-steps]
+    (if (= 0 rem-steps)
       [machine rem-steps]
-      (recur (transition machine) (dec rem-steps)))))
-
+      (if-let [next-machine (transition machine)]
+        (recur next-machine (dec rem-steps))
+        [machine rem-steps]))))
