@@ -1,5 +1,43 @@
 (ns turing-space.core
-  (:gen-class))
+  (:gen-class)
+  (:require [clojure.math.combinatorics :as combo]
+            [com.hypirion.clj-xchart :as c]))
+;(defn generate-delta [states final-states gamma]
+;  (let [state-action-maps (generate-state-action-maps states final-states gamma)]
+;    ;; generate {input-symbol state-action-map}
+;    (combo/cartesian-product gamma state-action-maps)))
+
+;(defn generate-delta1 []
+;  [{0 {:A [0 :L :A]
+;       :B [1 :R :B]}
+;    1 {:A [1 :R :B]
+;       :B [0 :L :A]}}
+;   {0 {:A [1 :R :B]
+;       :B [0 :L :A]}
+;    1 {:A [0 :L :A]
+;       :B [1 :R :B]}}
+;   {0 {:A [0 :L :A]
+;       :B [1 :R :B]}
+;    1 {:A [0 :L :A]
+;       :B [1 :R :B]}}
+;   {1 {:A [1 :R :B]
+;       :B [0 :L :A]}
+;    0 {:A [1 :R :B]
+;       :B [0 :L :A]}}])
+;
+;(defn generate-delta2 []
+;  (let [gamma             [0 1]
+;        state-action-maps [{:A [0 :L :A]
+;                            :B [1 :R :B]}
+;                           {:A [1 :R :B]
+;                            :B [0 :L :A]}]]
+;    (map #(into {} %) (apply combo/cartesian-product
+;                             (for [in-sym gamma]
+;                               (map #(hash-map in-sym %) state-action-maps))))))
+;
+;
+;(assert (= (into #{} (generate-delta1))
+;           (into #{} (generate-delta2))))
 
 ;;;; Turing machine (https://en.wikipedia.org/wiki/Turing_machine)
 ;;; A turing machine is a 7-tuple where
@@ -22,7 +60,7 @@
   {:Q     #{:A :B :C :HALT}
    :G     #{0 1}
    :b     0
-   :S     #{1}
+   ;:S     #{1}
    :state :A
    :F     #{:HALT}
    :d     {0 {:A [1 :R :B]
@@ -39,7 +77,7 @@
   {:Q #{0 1}
    :G #{0 1}
    :b 0
-   :S #{1}
+   ;:S #{1}
    :state 0
    :F #{1}
    :d {}
@@ -47,16 +85,45 @@
           :current 0
           :right []}})
 
-(defn generate-delta []
-  (let [Q #{1 2}
-        F #{2}
-        G #{0 1}]
-    (println "zzz")))
+(defn generate-actions [states final-states gamma]
+  (lazy-seq
+   (cons nil (for [next-state   (clojure.set/difference states final-states)
+                   out-sym gamma
+                   move    [:R :L]]
+               [out-sym move next-state]))))
+
+(defn generate-state->actions [cur-state states final-states gamma]
+  (for [action (generate-actions states final-states gamma)]
+    (hash-map cur-state action)))
+
+(defn generate-state-action-maps [states final-states gamma]
+  ;; take list of {state action} maps to {state1 action1 state2 action2 ...} maps
+  (map #(into {} %)
+       ;; take the cartesian product of all {state action} pairs
+       (apply combo/cartesian-product
+              ;; generate {state action} for each state
+              (map #(generate-state->actions % states final-states gamma) states))))
+
+(defn generate-delta [states final-states gamma]
+  (let [state-action-maps (generate-state-action-maps states final-states gamma)]
+    (map #(into {} %) (apply combo/cartesian-product
+                             (for [in-sym gamma]
+                               (map #(hash-map in-sym %) state-action-maps))))))
+
+(defn generate-machines [states gamma blank start-state
+                        final-states tape-sym]
+  (for [delta (generate-delta states final-states gamma)]
+    {:Q     states
+     :G     gamma
+     :b     blank
+     :state start-state
+     :F     final-states
+     :d     delta
+     :tape  {:left [] :current tape-sym :right []}}))
 
 (defn lookup-action
   [delta sym state]
   (get-in delta [sym state]))
-
 
 (defn apply-action-to-tape
   [sym move {:keys [left current right] :as tape} blank]
@@ -99,3 +166,14 @@
       (if-let [next-machine (transition machine)]
         (recur next-machine (dec rem-steps))
         [machine rem-steps]))))
+
+(defn uhhh []
+  (let [machines (generate-machines #{:A :B :C} #{0 1} 0 :A #{:C} 0)
+        results (pmap #(xtransition % 100) machines)
+        remaining-steps (map second results)]
+    (c/view
+     c/xy-chart
+     {"remaining steps" {:x (range (count remaining-steps))
+                         :y remaining-steps}}
+     {:title "test"
+      :theme :matlab})))
