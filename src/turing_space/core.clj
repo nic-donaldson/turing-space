@@ -2,42 +2,6 @@
   (:gen-class)
   (:require [clojure.math.combinatorics :as combo]
             [com.hypirion.clj-xchart :as c]))
-;(defn generate-delta [states final-states gamma]
-;  (let [state-action-maps (generate-state-action-maps states final-states gamma)]
-;    ;; generate {input-symbol state-action-map}
-;    (combo/cartesian-product gamma state-action-maps)))
-
-;(defn generate-delta1 []
-;  [{0 {:A [0 :L :A]
-;       :B [1 :R :B]}
-;    1 {:A [1 :R :B]
-;       :B [0 :L :A]}}
-;   {0 {:A [1 :R :B]
-;       :B [0 :L :A]}
-;    1 {:A [0 :L :A]
-;       :B [1 :R :B]}}
-;   {0 {:A [0 :L :A]
-;       :B [1 :R :B]}
-;    1 {:A [0 :L :A]
-;       :B [1 :R :B]}}
-;   {1 {:A [1 :R :B]
-;       :B [0 :L :A]}
-;    0 {:A [1 :R :B]
-;       :B [0 :L :A]}}])
-;
-;(defn generate-delta2 []
-;  (let [gamma             [0 1]
-;        state-action-maps [{:A [0 :L :A]
-;                            :B [1 :R :B]}
-;                           {:A [1 :R :B]
-;                            :B [0 :L :A]}]]
-;    (map #(into {} %) (apply combo/cartesian-product
-;                             (for [in-sym gamma]
-;                               (map #(hash-map in-sym %) state-action-maps))))))
-;
-;
-;(assert (= (into #{} (generate-delta1))
-;           (into #{} (generate-delta2))))
 
 ;;;; Turing machine (https://en.wikipedia.org/wiki/Turing_machine)
 ;;; A turing machine is a 7-tuple where
